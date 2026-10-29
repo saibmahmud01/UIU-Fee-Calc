@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UIU - Fee Calc</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Outfit (Modern Geometric) & Space Grotesk (Bold Technical Numbers) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Outfit"', 'sans-serif'],
+                        mono: ['"Space Grotesk"', 'monospace'],
+                    },
+                    colors: {
+                        obsidian: '#040405',
+                        charcoal: '#0e0e11',
+                        liquid: {
+                            orange: '#FF6B00',
+                            amber: '#FF9E00',
+                            glow: '#FF5500',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #030304;
+            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Ambient Liquid Blobs */
+        @keyframes floatSlow {
+            0%, 100% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(35px, -35px) scale(1.08); }
+            66% { transform: translate(-25px, 25px) scale(0.94); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.68; transform: scale(1.08); }
+        }
+
+        .liquid-blob-1 {
+            animation: floatSlow 12s ease-in-out infinite;
+        }
+        .liquid-blob-2 {
+            animation: floatSlow 15s ease-in-out infinite reverse;
+        }
+        .liquid-blob-3 {
+            animation: pulseGlow 9s ease-in-out infinite;
+        }
+
+        /* Liquid Glass Card Styling */
+        .liquid-glass {
+            background: linear-gradient(135deg, rgba(30, 30, 36, 0.72) 0%, rgba(12, 12, 15, 0.88) 100%);
+            backdrop-filter: blur(28px) saturate(190%);
+            -webkit-backdrop-filter: blur(28px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.11);
+            box-shadow: 
+                0 16px 40px -10px rgba(0, 0, 0, 0.8),
+                inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.18),
+                inset 0 -1px 1px 0 rgba(255, 107, 0, 0.08);
+        }
+
+        .liquid-glass-orange {
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.24) 0%, rgba(24, 16, 12, 0.9) 60%, rgba(12, 12, 15, 0.95) 100%);
+            backdrop-filter: blur(30px) saturate(200%);
+            -webkit-backdrop-filter: blur(30px) saturate(200%);
+            border: 1.5px solid rgba(255, 140, 0, 0.4);
+            box-shadow: 
+                0 24px 50px -12px rgba(255, 107, 0, 0.28),
+                inset 0 1px 2px 0 rgba(255, 210, 160, 0.35),
+                inset 0 -1px 1px 0 rgba(255, 107, 0, 0.2);
+        }
+
+        .liquid-glass-interactive {
+            transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .liquid-glass-interactive:active {
+            transform: scale(0.98);
+        }
+
+        .liquid-input {
+            background: rgba(6, 6, 8, 0.82);
+            border: 1.5px solid rgba(255, 255, 255, 0.14);
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.75);
+            transition: all 0.2s ease;
+        }
+        .liquid-input:focus-within {
+            border-color: #FF6B00;
+            box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.22), inset 0 2px 6px rgba(0, 0, 0, 0.75);
+        }
+
+        /* Custom Range Slider */
+        input[type=range].liquid-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            outline: none;
+        }
+        input[type=range].liquid-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF9E00, #FF5500);
+            cursor: pointer;
+            border: 2.5px solid #fff;
+            box-shadow: 0 0 14px rgba(255, 107, 0, 0.9);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        input[type=range].liquid-slider::-webkit-slider-thumb:hover,
+        input[type=range].liquid-slider::-webkit-slider-thumb:active {
+            transform: scale(1.18);
+            box-shadow: 0 0 20px rgba(255, 158, 0, 1);
+        }
+
+        /* Hide spin buttons on number inputs */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* Liquid Shimmer Progress Bar */
+        .liquid-progress-bar {
+            background: linear-gradient(90deg, #FF5500 0%, #FF9E00 50%, #FF5500 100%);
+            background-size: 200% 100%;
+            animation: shimmerFlow 3s linear infinite;
+            box-shadow: 0 0 18px rgba(255, 107, 0, 0.75);
+        }
+        @keyframes shimmerFlow {
+            0% { background-position: 200% 0; }
+            100% { background-position: 0% 0; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #040405;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 107, 0, 0.45);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-obsidian text-white relative selection:bg-liquid-orange selection:text-black">
+
+    <!-- Ambient Liquid Glowing Orange Background Blobs (Full Viewport) -->
+    <div class="pointer-events-none fixed inset-0 overflow-hidden z-0">
+        <div class="liquid-blob-1 absolute -top-24 -right-20 w-96 h-96 rounded-full bg-gradient-to-br from-[#FF6B00] to-[#FF2A00] opacity-25 blur-[95px]"></div>
+        <div class="liquid-blob-2 absolute top-[35%] -left-28 w-80 h-80 rounded-full bg-gradient-to-tr from-[#FF9E00] to-[#FF5500] opacity-20 blur-[85px]"></div>
+        <div class="liquid-blob-3 absolute -bottom-28 right-[15%] w-96 h-96 rounded-full bg-gradient-to-tl from-[#FF6B00] via-[#FF8800] to-transparent opacity-25 blur-[100px]"></div>
+        <!-- Subtle Dot Matrix Texture -->
+        <div class="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:24px_24px] opacity-50"></div>
+    </div>
+
+    <!-- Responsive Web & Mobile App Container -->
+    <div class="relative z-10 w-full max-w-[1120px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:px-6 sm:py-8 lg:py-10">
+        
+        <!-- App Header (No Top Status Bar) -->
+        <header class="liquid-glass rounded-3xl p-4 sm:p-5 mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl liquid-glass-orange flex items-center justify-center text-liquid-amber shadow-lg shrink-0">
+                    <i class="ph-duotone ph-graduation-cap text-3xl sm:text-4xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2.5">
+                        <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">UIU - Fee Calc</h1>
+                        <span class="px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wider rounded-full bg-liquid-orange/25 text-liquid-amber border border-liquid-orange/40">
+                            BDT ৳
+                        </span>
+                    </div>
+                    <p class="text-sm sm:text-base font-semibold text-zinc-300 mt-0.5">
+                        Trimester Tuition, Waiver & Installment Planner
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Buttons: Copy and Zero Reset -->
+            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                <button id="copy-summary-btn" onclick="copyBreakdown()" title="Copy Breakdown" class="px-3.5 h-11 rounded-2xl liquid-glass liquid-glass-interactive flex items-center gap-1.5 text-xs sm:text-sm font-bold text-zinc-200 hover:text-white hover:border-liquid-orange/50">
+                    <i class="ph-bold ph-copy text-base text-liquid-amber"></i>
+                    <span>Copy</span>
+                </button>
+                <button onclick="resetAllToZero()" title="Reset Everything to Zero" class="px-4 h-11 rounded-2xl bg-gradient-to-r from-liquid-orange to-liquid-amber text-black font-extrabold text-xs sm:text-sm liquid-glass-interactive flex items-center gap-1.5 shadow-[0_0_25px_rgba(255,107,0,0.4)]">
+                    <i class="ph-bold ph-arrow-counter-clockwise text-base"></i>
+                    <span>Reset (0)</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Stacked Layout: Fee Parameters at Top, followed by Remaining Balance & Installment Details -->
+        <main class="space-y-6">
+            
+            <!-- TOP SECTION: INTERACTIVE FEE PARAMETERS (Between Header & Remaining Balance) -->
+            <section class="liquid-glass rounded-3xl p-5 sm:p-6 space-y-6">
+                <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
+                    <div class="flex items-center gap-2.5">
+                        <i class="ph-duotone ph-sliders-horizontal text-2xl text-liquid-orange"></i>
+                        <h2 class="text-lg sm:text-xl font-extrabold text-white">Fee Parameters</h2>
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-liquid-amber bg-liquid-orange/15 px-2.5 py-1 rounded-lg border border-liquid-orange/30">
+                        Live Sync
+                    </span>
+                </div>
+
+                <!-- Responsive Grid inside Fee Parameters for Web & Mobile -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    
+                    <!-- Left Half of Parameters: Credits & Waiver -->
+                    <div class="space-y-6">
+                        <!-- Input 1: Credits Taken (Integer Only) -->
+                        <div class="space-y-2.5">
+                            <div class="flex justify-between items-center">
+                                <label for="input-credits" class="text-sm sm:text-base font-extrabold text-zinc-100 flex items-center gap-2">
+                                    <i class="ph-fill ph-books text-liquid-amber text-lg"></i>
+                                    Credits Taken
+                                </label>
+                                <div class="liquid-input rounded-2xl px-3.5 py-2 flex items-center gap-1.5 w-36">
+                                    <input id="input-credits" type="number" step="1" min="0" max="30" value="0" oninput="syncFromInputs('credits', this.value)" class="w-full bg-transparent text-right font-mono text-lg sm:text-xl font-extrabold text-white focus:outline-none">
+                                    <span class="text-xs sm:text-sm text-liquid-amber font-extrabold">Cr</span>
+                                </div>
+                            </div>
+                            <input id="slider-credits" type="range" min="0" max="24" step="1" value="0" oninput="syncFromInputs('credits', this.value)" class="liquid-slider">
+                            <div class="flex justify-between text-xs font-bold text-zinc-400 font-mono">
+                                <span>0 Cr</span>
+                                <span>6 Cr</span>
+                                <span>12 Cr</span>
+                                <span>18 Cr</span>
+                                <span>24 Cr</span>
+                            </div>
+                        </div>
+
+                        <!-- Input 2: UIU Waiver % on Credit Fees (0%, 25%, 50%, 100%) -->
+                        <div class="space-y-2.5 pt-4 border-t border-white/10">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <label for="input-waiver" class="text-sm sm:text-base font-extrabold text-zinc-100 flex items-center gap-2">
+                                        <i class="ph-fill ph-seal-percent text-liquid-amber text-lg"></i>
+                                        UIU Waiver / Scholarship
+                                    </label>
+                                    <p class="text-xs font-semibold text-zinc-400 mt-0.5">Applied on Credit Fees only (Not on Semester Fee)</p>
+                                </div>
+                                <div class="liquid-input rounded-2xl px-3 py-1.5 flex items-center gap-1 w-28">
+                                    <input id="input-waiver" type="number" step="5" min="0" max="100" value="0" oninput="syncFromInputs('waiver', this.value)" class="w-full bg-transparent text-right font-mono text-lg font-extrabold text-liquid-amber focus:outline-none">
+                                    <span class="text-sm text-zinc-300 font-extrabold">%</span>
+                                </div>
+                            </div>
+
+                            <!-- UIU Official Waiver Preset Buttons -->
+                            <div class="grid grid-cols-4 gap-2.5 pt-1">
+                                <button type="button" onclick="syncFromInputs('waiver', 0)" class="waiver-pill py-3 rounded-2xl text-sm sm:text-base font-mono font-extrabold bg-liquid-orange/30 text-liquid-amber border-2 border-liquid-orange shadow-[0_0_15px_rgba(255,107,0,0.3)] transition">
+                                    0%
+                                </button>
+                                <button type="button" onclick="syncFromInputs('waiver', 25)" class="waiver-pill py-3 rounded-2xl text-sm sm:text-base font-mono font-extrabold bg-white/5 text-zinc-300 border border-white/10 hover:text-white transition">
+                                    25%
+                                </button>
+                                <button type="button" onclick="syncFromInputs('waiver', 50)" class="waiver-pill py-3 rounded-2xl text-sm sm:text-base font-mono font-extrabold bg-white/5 text-zinc-300 border border-white/10 hover:text-white transition">
+                                    50%
+                                </button>
+                                <button type="button" onclick="syncFromInputs('waiver', 100)" class="waiver-pill py-3 rounded-2xl text-sm sm:text-base font-mono font-extrabold bg-white/5 text-zinc-300 border border-white/10 hover:text-white transition">
+                                    100%
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Half of Parameters: Fees, Paid Advance & Split Ratios -->
+                    <div class="space-y-5 pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-white/10 lg:pl-6">
+                        <!-- Input 3: Per Credit Fee & Semester Fee -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center gap-1">
+                                    <label for="input-per-credit" class="text-xs sm:text-sm font-extrabold text-zinc-200 flex items-center gap-1.5">
+                                        <i class="ph-fill ph-coins text-liquid-amber"></i>
+                                        Per Credit
+                                    </label>
+                                    <button type="button" onclick="syncFromInputs('perCredit', 6500)" class="text-[11px] font-extrabold text-liquid-amber bg-liquid-orange/15 px-2 py-0.5 rounded-lg border border-liquid-orange/30 hover:bg-liquid-orange/25 transition">
+                                        Set ৳ 6,500
+                                    </button>
+                                </div>
+                                <div class="liquid-input rounded-2xl px-3.5 py-2.5 flex items-center gap-1.5">
+                                    <span class="text-base text-liquid-amber font-mono font-extrabold">৳</span>
+                                    <input id="input-per-credit" type="number" step="500" min="0" value="6500" oninput="syncFromInputs('perCredit', this.value)" class="w-full bg-transparent text-right font-mono text-base sm:text-lg font-extrabold text-white focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center gap-1">
+                                    <label for="input-sem-fee" class="text-xs sm:text-sm font-extrabold text-zinc-200 flex items-center gap-1.5">
+                                        <i class="ph-fill ph-buildings text-liquid-amber"></i>
+                                        Semester Fee
+                                    </label>
+                                    <button type="button" onclick="syncFromInputs('semFee', 6500)" class="text-[11px] font-extrabold text-liquid-amber bg-liquid-orange/15 px-2 py-0.5 rounded-lg border border-liquid-orange/30 hover:bg-liquid-orange/25 transition">
+                                        Set ৳ 6,500
+                                    </button>
+                                </div>
+                                <div class="liquid-input rounded-2xl px-3.5 py-2.5 flex items-center gap-1.5">
+                                    <span class="text-base text-liquid-amber font-mono font-extrabold">৳</span>
+                                    <input id="input-sem-fee" type="number" step="500" min="0" value="6500" oninput="syncFromInputs('semFee', this.value)" class="w-full bg-transparent text-right font-mono text-base sm:text-lg font-extrabold text-white focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Input 4: Initial / Already Paid Amount -->
+                        <div class="space-y-2 pt-3 border-t border-white/10">
+                            <div class="flex justify-between items-center">
+                                <label for="input-paid" class="text-sm sm:text-base font-extrabold text-zinc-100 flex items-center gap-2">
+                                    <i class="ph-fill ph-wallet text-emerald-400 text-lg"></i>
+                                    Already Paid (Start of Semester)
+                                </label>
+                                <button type="button" onclick="syncFromInputs('paid', 20000)" class="text-xs font-extrabold text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/25 transition">
+                                    Set ৳ 20,000
+                                </button>
+                            </div>
+                            <div class="liquid-input rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                                <span class="text-lg text-emerald-400 font-mono font-extrabold">৳</span>
+                                <input id="input-paid" type="number" step="1000" min="0" value="20000" oninput="syncFromInputs('paid', this.value)" class="w-full bg-transparent text-right font-mono text-xl sm:text-2xl font-extrabold text-emerald-400 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Input 5: Custom Installment Ratios -->
+                        <div class="pt-3 border-t border-white/10 space-y-2.5">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs sm:text-sm font-extrabold text-zinc-300">Installment Split Ratios (%)</span>
+                                <div class="flex items-center gap-2">
+                                    <span id="ratio-sum-warning" class="text-xs font-mono font-extrabold text-emerald-400">Total: 100%</span>
+                                    <button type="button" onclick="setDefaultRatios()" class="text-xs font-extrabold text-liquid-amber bg-liquid-orange/15 px-2.5 py-1 rounded-lg border border-liquid-orange/30 hover:bg-liquid-orange/25 transition">
+                                        Default (40/30/30)
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2.5">
+                                <div class="liquid-input rounded-2xl px-3 py-2 flex items-center justify-between">
+                                    <span class="text-xs font-bold text-zinc-400">1st</span>
+                                    <div class="flex items-center">
+                                        <input id="ratio-1" type="number" min="0" max="100" value="40" oninput="updateRatios()" class="w-12 bg-transparent text-right font-mono text-sm sm:text-base font-extrabold text-white focus:outline-none">
+                                        <span class="text-xs font-bold text-liquid-amber">%</span>
+                                    </div>
+                                </div>
+                                <div class="liquid-input rounded-2xl px-3 py-2 flex items-center justify-between">
+                                    <span class="text-xs font-bold text-zinc-400">2nd</span>
+                                    <div class="flex items-center">
+                                        <input id="ratio-2" type="number" min="0" max="100" value="30" oninput="updateRatios()" class="w-12 bg-transparent text-right font-mono text-sm sm:text-base font-extrabold text-white focus:outline-none">
+                                        <span class="text-xs font-bold text-liquid-amber">%</span>
+                                    </div>
+                                </div>
+                                <div class="liquid-input rounded-2xl px-3 py-2 flex items-center justify-between">
+                                    <span class="text-xs font-bold text-zinc-400">3rd</span>
+                                    <div class="flex items-center">
+                                        <input id="ratio-3" type="number" min="0" max="100" value="30" oninput="updateRatios()" class="w-12 bg-transparent text-right font-mono text-sm sm:text-base font-extrabold text-white focus:outline-none">
+                                        <span class="text-xs font-bold text-liquid-amber">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HERO SUMMARY CARD: Remaining Balance & Progress (Directly below Fee Parameters) -->
+            <section class="liquid-glass-orange rounded-3xl p-5 sm:p-7 relative overflow-hidden">
+                <!-- Glossy Specular Highlight -->
+                <div class="pointer-events-none absolute -top-24 -left-24 w-56 h-56 bg-white/10 rounded-full blur-2xl"></div>
+
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div>
+                        <span class="inline-flex items-center gap-2 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-orange-300">
+                            <span class="w-2.5 h-2.5 rounded-full bg-liquid-orange animate-ping"></span>
+                            Remaining Balance to Pay
+                        </span>
+                        <div class="mt-1.5 flex items-baseline gap-2">
+                            <span class="text-3xl sm:text-4xl font-extrabold text-liquid-amber font-mono">৳</span>
+                            <h2 id="hero-remaining" class="text-4xl sm:text-6xl font-black tracking-tight text-white font-mono">0</h2>
+                        </div>
+                        <p id="excess-credit-banner" class="hidden mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs sm:text-sm font-extrabold">
+                            <i class="ph-fill ph-sparkle"></i>
+                            <span id="excess-credit-text">Advance exceeds total fee by ৳ 0</span>
+                        </p>
+                    </div>
+
+                    <div class="sm:text-right flex sm:flex-col items-center sm:items-end justify-between bg-black/35 sm:bg-transparent p-3 sm:p-0 rounded-2xl border border-white/10 sm:border-0">
+                        <div>
+                            <span class="text-xs sm:text-sm font-bold text-zinc-300 block">Net Total Payable</span>
+                            <span id="hero-total-payable" class="text-xl sm:text-2xl font-extrabold text-white font-mono">৳ 0</span>
+                        </div>
+                        <span id="hero-waiver-badge" class="sm:mt-2 inline-block px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-extrabold">
+                            0% Cr. Waiver
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Liquid Progress Bar -->
+                <div class="mt-6">
+                    <div class="flex justify-between items-center text-sm sm:text-base mb-2">
+                        <span class="text-zinc-200 font-bold flex items-center gap-1.5">
+                            <i class="ph-fill ph-check-circle text-liquid-amber text-lg"></i>
+                            Paid So Far: <strong id="hero-paid-display" class="text-white font-mono font-extrabold">৳ 0</strong>
+                        </span>
+                        <span id="hero-progress-pct" class="font-mono font-extrabold text-liquid-amber">0.0% Paid</span>
+                    </div>
+                    <div class="w-full h-4 rounded-full bg-black/70 p-0.5 border border-white/15 overflow-hidden">
+                        <div id="hero-progress-bar" class="h-full rounded-full liquid-progress-bar transition-all duration-500 ease-out" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- Mini 3-Pillar Breakdown Strip -->
+                <div class="mt-5 pt-4 border-t border-white/15 grid grid-cols-3 gap-2.5 sm:gap-4 text-center">
+                    <div class="bg-black/45 rounded-2xl p-3 border border-white/10">
+                        <p class="text-[11px] sm:text-xs font-extrabold text-zinc-400 uppercase tracking-wider">Gross Credit</p>
+                        <p id="mini-gross-credit" class="text-sm sm:text-lg font-extrabold text-white font-mono mt-1">৳ 0</p>
+                    </div>
+                    <div class="bg-black/45 rounded-2xl p-3 border border-white/10">
+                        <p class="text-[11px] sm:text-xs font-extrabold text-orange-300 uppercase tracking-wider">Waiver Saved</p>
+                        <p id="mini-waiver-saved" class="text-sm sm:text-lg font-extrabold text-liquid-amber font-mono mt-1">- ৳ 0</p>
+                    </div>
+                    <div class="bg-black/45 rounded-2xl p-3 border border-white/10">
+                        <p class="text-[11px] sm:text-xs font-extrabold text-zinc-400 uppercase tracking-wider">Semester Fee</p>
+                        <p id="mini-sem-fee" class="text-sm sm:text-lg font-extrabold text-white font-mono mt-1">+ ৳ 0</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BOTTOM SECTION: INSTALLMENT SCHEDULE & COMPLETE BREAKDOWN -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- INSTALLMENT SCHEDULE & MODE SWITCHER -->
+                <section class="lg:col-span-7 liquid-glass rounded-3xl p-5 sm:p-6 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5">
+                            <i class="ph-duotone ph-calendar-check text-2xl text-liquid-orange"></i>
+                            <h3 class="text-lg sm:text-xl font-extrabold text-white">Installment Schedule</h3>
+                        </div>
+                        <span class="text-xs sm:text-sm font-mono font-extrabold text-liquid-amber bg-liquid-orange/15 px-3 py-1 rounded-full border border-liquid-orange/35">
+                            <span id="ratio-badge-text">40% • 30% • 30%</span>
+                        </span>
+                    </div>
+
+                    <!-- Calculation Perspective Toggle Pill -->
+                    <div class="p-1.5 rounded-2xl bg-black/70 border border-white/10 grid grid-cols-2 gap-1.5 text-xs sm:text-sm font-extrabold">
+                        <button id="mode-remaining-btn" onclick="setCalculationMode('remaining')" class="py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-liquid-orange to-liquid-amber text-black shadow-md">
+                            <i class="ph-bold ph-arrows-split text-base"></i>
+                            <span>Split Remaining</span>
+                        </button>
+                        <button id="mode-standard-btn" onclick="setCalculationMode('standard')" class="py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 text-zinc-300 hover:text-white">
+                            <i class="ph-bold ph-stack text-base"></i>
+                            <span>From Total Fee</span>
+                        </button>
+                    </div>
+
+                    <!-- Rounding Selector Toggle (Exact / Round 500 / Round 1000) -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+                        <span class="text-xs sm:text-sm font-extrabold text-zinc-300 flex items-center gap-1.5">
+                            <i class="ph-fill ph-arrows-Clockwise text-liquid-amber text-base"></i>
+                            Installment Rounding:
+                        </span>
+                        <div class="p-1 rounded-2xl bg-black/70 border border-white/10 grid grid-cols-3 gap-1 text-xs font-extrabold">
+                            <button id="round-btn-0" onclick="setRoundingStep(0)" class="py-2 px-3 rounded-xl transition-all bg-gradient-to-r from-liquid-orange to-liquid-amber text-black shadow-md">
+                                Exact
+                            </button>
+                            <button id="round-btn-500" onclick="setRoundingStep(500)" class="py-2 px-3 rounded-xl transition-all text-zinc-300 hover:text-white font-mono">
+                                Round 500
+                            </button>
+                            <button id="round-btn-1000" onclick="setRoundingStep(1000)" class="py-2 px-3 rounded-xl transition-all text-zinc-300 hover:text-white font-mono">
+                                Round 1000
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mode Explanation Banner -->
+                    <div id="mode-helper-box" class="px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-xs sm:text-sm font-semibold text-zinc-200 leading-relaxed flex items-start gap-2.5">
+                        <i class="ph-fill ph-info text-liquid-amber text-lg shrink-0 mt-0.5"></i>
+                        <span id="mode-helper-text">
+                            Enter your credits, fees, and ratios to calculate your installment breakdown.
+                        </span>
+                    </div>
+
+                    <!-- 3 Interactive Installment Cards -->
+                    <div id="installment-cards-container" class="space-y-3">
+                        <!-- Dynamically populated by JS -->
+                    </div>
+                </section>
+
+                <!-- DETAILED FORMULA RECEIPT -->
+                <section class="lg:col-span-5 liquid-glass rounded-3xl p-5 sm:p-6 space-y-4">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <i class="ph-duotone ph-receipt text-2xl text-liquid-amber"></i>
+                            <h3 class="text-lg sm:text-xl font-extrabold text-white">Complete Calculation Breakdown</h3>
+                        </div>
+                        <span class="text-xs uppercase tracking-wider text-zinc-400 font-extrabold">Live Ledger</span>
+                    </div>
+
+                    <div class="space-y-2.5 text-sm sm:text-base font-bold">
+                        <div class="flex justify-between items-center py-1.5 border-b border-white/5">
+                            <span class="text-zinc-300">1. Gross Credit Fee (<span id="math-credits" class="text-white">0</span> Cr × <span id="math-per-credit" class="text-white">6,500</span>)</span>
+                            <span id="math-gross" class="font-mono font-extrabold text-white">0 Tk</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-white/5">
+                            <span class="text-zinc-300">2. Waiver (<span id="math-waiver-pct" class="text-emerald-400">0</span>% on Credit Fee Only)</span>
+                            <span id="math-waiver" class="font-mono font-extrabold text-emerald-400">- 0 Tk</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-white/5">
+                            <span class="text-zinc-100">3. Net Credit Fee</span>
+                            <span id="math-net-credit" class="font-mono font-extrabold text-white">0 Tk</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-white/5">
+                            <span class="text-zinc-300">4. Semester Fee <span class="text-xs text-orange-300 font-extrabold">(No Waiver)</span></span>
+                            <span id="math-sem-fee" class="font-mono font-extrabold text-white">+ 6,500 Tk</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2.5 px-3.5 rounded-2xl bg-white/[0.05] border border-white/15">
+                            <span class="text-white font-extrabold">5. Total Semester Payable</span>
+                            <span id="math-total-payable" class="font-mono text-lg font-black text-liquid-amber">6,500 Tk</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-white/5">
+                            <span class="text-zinc-300">6. Already Paid Advance</span>
+                            <span id="math-already-paid" class="font-mono font-extrabold text-emerald-400">- 20,000 Tk</span>
+                        </div>
+                        <div id="math-checked-row" class="hidden justify-between items-center py-1.5 border-b border-white/5">
+                            <span class="text-orange-300">7. Marked Installments Paid</span>
+                            <span id="math-checked-paid" class="font-mono font-extrabold text-orange-300">- 0 Tk</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2">
+                            <span class="text-base sm:text-lg font-black text-white">Net Remaining Balance</span>
+                            <span id="math-remaining" class="text-xl sm:text-2xl font-mono font-black text-liquid-orange">0 Tk</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification Pill -->
+    <div id="toast-message" class="pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 z-50 opacity-0 translate-y-4 transition-all duration-300 px-5 py-3 rounded-2xl liquid-glass-orange text-sm font-extrabold text-white flex items-center gap-2.5 shadow-2xl">
+        <i class="ph-fill ph-check-circle text-liquid-amber text-xl"></i>
+        <span id="toast-text">Copied breakdown to clipboard!</span>
+    </div>
+
+    <script>
+        // Initial Starting State (Automatically applies the Set buttons and Default 40/30/30 ratios)
+        const INITIAL_STATE = {
+            credits: 0,
+            perCredit: 6500,
+            semFee: 6500,
+            waiverPct: 0,
+            alreadyPaid: 20000,
+            ratios: [40, 30, 30],
+            mode: 'remaining',
+            roundingStep: 0, // 0 = Exact, 500 = Round 500, 1000 = Round 1000
+            paidInstallments: [false, false, false]
+        };
+
+        // Zero State (Applied when user clicks the "Reset (0)" button)
+        const ZERO_STATE = {
+            credits: 0,
+            perCredit: 0,
+            semFee: 0,
+            waiverPct: 0,
+            alreadyPaid: 0,
+            ratios: [0, 0, 0],
+            mode: 'remaining',
+            roundingStep: 0,
+            paidInstallments: [false, false, false]
+        };
+
+        let state = JSON.parse(JSON.stringify(INITIAL_STATE));
+
+        // Format currency in BDT style
+        function formatTk(amount) {
+            const rounded = Math.round((amount + Number.EPSILON) * 100) / 100;
+            return rounded.toLocaleString('en-IN', {
+                minimumFractionDigits: rounded % 1 === 0 ? 0 : 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Synchronize inputs & sliders
+        function syncFromInputs(field, rawValue) {
+            const val = parseFloat(rawValue);
+            const numericVal = isNaN(val) ? 0 : val;
+
+            if (field === 'credits') {
+                // Only whole integer credits allowed
+                state.credits = Math.max(0, Math.round(numericVal));
+                document.getElementById('input-credits').value = rawValue === '' ? '' : state.credits;
+                document.getElementById('slider-credits').value = Math.min(24, state.credits);
+            } else if (field === 'perCredit') {
+                state.perCredit = Math.max(0, numericVal);
+                document.getElementById('input-per-credit').value = rawValue === '' ? '' : state.perCredit;
+            } else if (field === 'waiver') {
+                state.waiverPct = Math.min(100, Math.max(0, numericVal));
+                document.getElementById('input-waiver').value = rawValue === '' ? '' : state.waiverPct;
+                updateWaiverPills();
+            } else if (field === 'semFee') {
+                state.semFee = Math.max(0, numericVal);
+                document.getElementById('input-sem-fee').value = rawValue === '' ? '' : state.semFee;
+            } else if (field === 'paid') {
+                state.alreadyPaid = Math.max(0, numericVal);
+                document.getElementById('input-paid').value = rawValue === '' ? '' : state.alreadyPaid;
+            }
+
+            calculateAndRender();
+        }
+
+        function updateWaiverPills() {
+            const pills = document.querySelectorAll('.waiver-pill');
+            const presets = [0, 25, 50, 100];
+            pills.forEach((btn, idx) => {
+                if (presets[idx] === state.waiverPct) {
+                    btn.className = 'waiver-pill py-3 rounded-2xl text-sm sm:text-base font-mono font-extrabold bg-liquid-orange/30 text-liquid-amber border-2 border-liquid-orange shadow-[0_0_15px_rgba(255,107,0,0.3)] transition';
+                } else {
+                    btn.className = 'waiver-pill py-3 rounded-2xl text-sm sm:text-base font-mono font-extrabold bg-white/5 text-zinc-300 border border-white/10 hover:text-white transition';
+                }
+            });
+        }
+
+        function setDefaultRatios() {
+            document.getElementById('ratio-1').value = 40;
+            document.getElementById('ratio-2').value = 30;
+            document.getElementById('ratio-3').value = 30;
+            updateRatios();
+            showToast('Installment ratios set to 40% • 30% • 30%');
+        }
+
+        function updateRatios() {
+            const r1 = Math.max(0, parseFloat(document.getElementById('ratio-1').value) || 0);
+            const r2 = Math.max(0, parseFloat(document.getElementById('ratio-2').value) || 0);
+            const r3 = Math.max(0, parseFloat(document.getElementById('ratio-3').value) || 0);
+            state.ratios = [r1, r2, r3];
+
+            const sum = r1 + r2 + r3;
+            const warningEl = document.getElementById('ratio-sum-warning');
+            if (Math.abs(sum - 100) < 0.01) {
+                warningEl.textContent = `Total: 100%`;
+                warningEl.className = 'text-xs font-mono font-extrabold text-emerald-400';
+            } else {
+                warningEl.textContent = `Total: ${sum}%`;
+                warningEl.className = 'text-xs font-mono font-extrabold text-liquid-amber';
+            }
+
+            document.getElementById('ratio-badge-text').textContent = `${r1}% • ${r2}% • ${r3}%`;
+            calculateAndRender();
+        }
+
+        function setRoundingStep(step) {
+            state.roundingStep = step;
+            [0, 500, 1000].forEach(val => {
+                const btn = document.getElementById(`round-btn-${val}`);
+                if (val === step) {
+                    btn.className = 'py-2 px-3 rounded-xl transition-all bg-gradient-to-r from-liquid-orange to-liquid-amber text-black shadow-md font-extrabold';
+                } else {
+                    btn.className = 'py-2 px-3 rounded-xl transition-all text-zinc-300 hover:text-white font-extrabold';
+                }
+            });
+            calculateAndRender();
+        }
+
+        function setCalculationMode(mode) {
+            state.mode = mode;
+            state.paidInstallments = [false, false, false];
+
+            const remBtn = document.getElementById('mode-remaining-btn');
+            const stdBtn = document.getElementById('mode-standard-btn');
+
+            if (mode === 'remaining') {
+                remBtn.className = 'py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-liquid-orange to-liquid-amber text-black shadow-md';
+                stdBtn.className = 'py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 text-zinc-300 hover:text-white';
+            } else {
+                stdBtn.className = 'py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-liquid-orange to-liquid-amber text-black shadow-md';
+                remBtn.className = 'py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 text-zinc-300 hover:text-white';
+            }
+
+            calculateAndRender();
+        }
+
+        function toggleInstallmentPaid(index) {
+            state.paidInstallments[index] = !state.paidInstallments[index];
+            calculateAndRender();
+        }
+
+        // Apply sequential rounding (1st installment rounded up to nearest 500/1000, carried forward to 2nd, remainder in 3rd)
+        function applySequentialRounding(rawAmounts, step) {
+            const totalTarget = rawAmounts.reduce((acc, v) => acc + v, 0);
+            if (step <= 0 || totalTarget <= 0) {
+                return rawAmounts.map(v => ({
+                    roundedDue: v,
+                    exactDue: v,
+                    diff: 0
+                }));
+            }
+
+            let remainingPool = totalTarget;
+            let carryOverReduction = 0; // How much extra was already paid in earlier rounded-up installments
+            const results = [];
+
+            for (let i = 0; i < rawAmounts.length; i++) {
+                const exactAmt = rawAmounts[i];
+
+                if (i < rawAmounts.length - 1) {
+                    // Desired amount for this installment after accounting for extra paid in previous installment
+                    const targetForThis = Math.max(0, exactAmt - carryOverReduction);
+
+                    if (targetForThis <= 0 || remainingPool <= 0) {
+                        results.push({
+                            roundedDue: 0,
+                            exactDue: exactAmt,
+                            diff: -exactAmt
+                        });
+                        carryOverReduction = Math.max(0, carryOverReduction - exactAmt);
+                    } else {
+                        // Round up to nearest step (500 or 1000) to complete this installment cleanly, capped at remainingPool
+                        const roundedUp = Math.ceil(targetForThis / step) * step;
+                        const actualPayable = Math.min(remainingPool, roundedUp);
+                        remainingPool = Math.max(0, remainingPool - actualPayable);
+
+                        // Update how much extra was paid relative to cumulative exact sum
+                        const cumulativeExact = rawAmounts.slice(0, i + 1).reduce((a, b) => a + b, 0);
+                        const cumulativeRounded = totalTarget - remainingPool;
+                        carryOverReduction = Math.max(0, cumulativeRounded - cumulativeExact);
+
+                        results.push({
+                            roundedDue: actualPayable,
+                            exactDue: exactAmt,
+                            diff: actualPayable - exactAmt
+                        });
+                    }
+                } else {
+                    // Final installment gets the exact remaining balance so total never exceeds remaining payable
+                    const finalPayable = Math.max(0, Math.round((remainingPool + Number.EPSILON) * 100) / 100);
+                    results.push({
+                        roundedDue: finalPayable,
+                        exactDue: exactAmt,
+                        diff: finalPayable - exactAmt
+                    });
+                }
+            }
+
+            return results;
+        }
+
+        function calculateAndRender() {
+            // Core UIU Fee Math
+            const grossCreditFee = state.credits * state.perCredit;
+            const waiverAmount = grossCreditFee * (state.waiverPct / 100);
+            const netCreditFee = grossCreditFee - waiverAmount;
+            const totalPayable = netCreditFee + state.semFee;
+            const initialRemaining = Math.max(0, totalPayable - state.alreadyPaid);
+            const excessAdvance = Math.max(0, state.alreadyPaid - totalPayable);
+
+            // Show/Hide Excess Advance Banner (e.g. 100% waiver with 20,000 Tk paid)
+            const excessBanner = document.getElementById('excess-credit-banner');
+            const excessText = document.getElementById('excess-credit-text');
+            if (excessAdvance > 0 && totalPayable > 0) {
+                excessBanner.classList.remove('hidden');
+                excessText.textContent = `Overpaid by ৳ ${formatTk(excessAdvance)} (Credit Balance)`;
+            } else {
+                excessBanner.classList.add('hidden');
+            }
+
+            // Build Base Installment Objects based on selected mode
+            let baseInstallments = [];
+            const labels = ['1st Installment', '2nd Installment', '3rd Installment'];
+
+            if (state.mode === 'remaining') {
+                baseInstallments = state.ratios.map((ratio, idx) => {
+                    const amount = initialRemaining * (ratio / 100);
+                    return {
+                        index: idx,
+                        title: labels[idx],
+                        subtitle: `${ratio}% of Remaining (৳ ${formatTk(initialRemaining)})`,
+                        ratio: ratio,
+                        grossInstallment: amount,
+                        coveredByAdvance: 0,
+                        exactNetDue: amount
+                    };
+                });
+            } else {
+                let floatingPaidPool = state.alreadyPaid;
+                baseInstallments = state.ratios.map((ratio, idx) => {
+                    const grossInst = totalPayable * (ratio / 100);
+                    const covered = Math.min(grossInst, Math.max(0, floatingPaidPool));
+                    floatingPaidPool -= covered;
+                    const exactNetDue = Math.max(0, grossInst - covered);
+                    return {
+                        index: idx,
+                        title: labels[idx],
+                        subtitle: `${ratio}% of Total (৳ ${formatTk(grossInst)})`,
+                        ratio: ratio,
+                        grossInstallment: grossInst,
+                        coveredByAdvance: covered,
+                        exactNetDue: exactNetDue
+                    };
+                });
+            }
+
+            // Apply Sequential Rounding (Exact / 500 / 1000) across the exact net due amounts
+            const rawDues = baseInstallments.map(inst => inst.exactNetDue);
+            const roundedSchedule = applySequentialRounding(rawDues, state.roundingStep);
+
+            const installments = baseInstallments.map((inst, idx) => {
+                const rInfo = roundedSchedule[idx];
+                const netDue = rInfo.roundedDue;
+                return {
+                    ...inst,
+                    netDue: netDue,
+                    roundingDiff: rInfo.diff,
+                    isAutoCovered: netDue <= 0.01 && totalPayable > 0 && inst.ratio > 0,
+                    isChecked: state.paidInstallments[idx]
+                };
+            });
+
+            // Calculate how much additional amount the user checked off
+            let checkedInstallmentsSum = 0;
+            installments.forEach(inst => {
+                if (inst.isChecked && !inst.isAutoCovered) {
+                    checkedInstallmentsSum += inst.netDue;
+                }
+            });
+
+            const liveRemainingBalance = Math.max(0, initialRemaining - checkedInstallmentsSum);
+            const totalEffectivePaid = totalPayable > 0
+                ? Math.min(totalPayable, state.alreadyPaid + checkedInstallmentsSum)
+                : state.alreadyPaid;
+            const progressPct = totalPayable > 0
+                ? Math.min(100, (totalEffectivePaid / totalPayable) * 100)
+                : 0;
+
+            // Update Hero Card
+            document.getElementById('hero-remaining').textContent = formatTk(liveRemainingBalance);
+            document.getElementById('hero-total-payable').textContent = `৳ ${formatTk(totalPayable)}`;
+            document.getElementById('hero-waiver-badge').textContent = `${state.waiverPct}% Cr. Waiver`;
+            document.getElementById('hero-paid-display').textContent = `৳ ${formatTk(totalEffectivePaid)}`;
+            document.getElementById('hero-progress-pct').textContent = `${progressPct.toFixed(1)}% Paid`;
+            document.getElementById('hero-progress-bar').style.width = `${progressPct}%`;
+
+            // Update Mini Strip
+            document.getElementById('mini-gross-credit').textContent = `৳ ${formatTk(grossCreditFee)}`;
+            document.getElementById('mini-waiver-saved').textContent = `- ৳ ${formatTk(waiverAmount)}`;
+            document.getElementById('mini-sem-fee').textContent = `+ ৳ ${formatTk(state.semFee)}`;
+
+            // Update Mode Explanation Helper
+            const helperEl = document.getElementById('mode-helper-text');
+            const roundingTag = state.roundingStep > 0
+                ? ` Rounded sequentially to nearest <strong>৳ ${formatTk(state.roundingStep)}</strong> (1st → 2nd → final remainder in 3rd).`
+                : '';
+
+            if (state.mode === 'remaining') {
+                helperEl.innerHTML = `Splitting your <strong>৳ ${formatTk(initialRemaining)}</strong> remaining balance into <strong>${state.ratios.join('% / ')}%</strong> installments.${roundingTag} Tap any card to mark as paid.`;
+            } else {
+                helperEl.innerHTML = `Installments calculated on total payable (<strong>৳ ${formatTk(totalPayable)}</strong>). Your <strong>৳ ${formatTk(state.alreadyPaid)}</strong> advance covers earlier installments first.${roundingTag}`;
+            }
+
+            // Render Installment Cards
+            renderInstallmentCards(installments);
+
+            // Update Exact Formula Math Ledger
+            document.getElementById('math-credits').textContent = state.credits;
+            document.getElementById('math-per-credit').textContent = formatTk(state.perCredit);
+            document.getElementById('math-gross').textContent = `${formatTk(grossCreditFee)} Tk`;
+            document.getElementById('math-waiver-pct').textContent = state.waiverPct;
+            document.getElementById('math-waiver').textContent = `- ${formatTk(waiverAmount)} Tk`;
+            document.getElementById('math-net-credit').textContent = `${formatTk(netCreditFee)} Tk`;
+            document.getElementById('math-sem-fee').textContent = `+ ${formatTk(state.semFee)} Tk`;
+            document.getElementById('math-total-payable').textContent = `${formatTk(totalPayable)} Tk`;
+            document.getElementById('math-already-paid').textContent = `- ${formatTk(state.alreadyPaid)} Tk`;
+
+            const checkedRow = document.getElementById('math-checked-row');
+            if (checkedInstallmentsSum > 0) {
+                checkedRow.classList.remove('hidden');
+                checkedRow.classList.add('flex');
+                document.getElementById('math-checked-paid').textContent = `- ${formatTk(checkedInstallmentsSum)} Tk`;
+            } else {
+                checkedRow.classList.add('hidden');
+                checkedRow.classList.remove('flex');
+            }
+
+            document.getElementById('math-remaining').textContent = `${formatTk(liveRemainingBalance)} Tk`;
+        }
+
+        function renderInstallmentCards(installments) {
+            const container = document.getElementById('installment-cards-container');
+            container.innerHTML = installments.map(inst => {
+                const isPaid = inst.isAutoCovered || inst.isChecked;
+                const cardStyle = isPaid
+                    ? 'bg-emerald-950/30 border-emerald-500/45'
+                    : 'bg-black/55 border-white/15 hover:border-liquid-orange/60';
+
+                const badgeHtml = inst.isAutoCovered
+                    ? `<span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> Covered</span>`
+                    : inst.isChecked
+                        ? `<span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-liquid-orange/25 text-liquid-amber border border-liquid-orange/45 flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> Paid</span>`
+                        : `<span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-extrabold bg-white/10 text-zinc-200 border border-white/15">${inst.ratio}%</span>`;
+
+                const advanceDeductionNote = (state.mode === 'standard' && inst.coveredByAdvance > 0 && !inst.isAutoCovered)
+                    ? `<p class="text-xs text-emerald-400 font-mono font-bold mt-1">৳ ${formatTk(inst.coveredByAdvance)} covered from ৳ ${formatTk(state.alreadyPaid)} paid</p>`
+                    : '';
+
+                // Show rounding adjustment note when rounding is active and the amount differs from exact
+                let roundingNote = '';
+                if (state.roundingStep > 0 && Math.abs(inst.roundingDiff) > 0.01) {
+                    const sign = inst.roundingDiff > 0 ? '+' : '-';
+                    const diffAbs = formatTk(Math.abs(inst.roundingDiff));
+                    roundingNote = `
+                        <p class="text-xs text-orange-300/90 font-mono font-bold mt-1 flex items-center gap-1">
+                            <i class="ph-bold ph-arrows-out-line-vertical text-liquid-amber"></i>
+                            Exact: ৳ ${formatTk(inst.exactNetDue)} (${sign}৳ ${diffAbs} rounded)
+                        </p>
+                    `;
+                }
+
+                return `
+                    <div onclick="${inst.isAutoCovered ? '' : `toggleInstallmentPaid(${inst.index})`}" 
+                         class="liquid-glass-interactive cursor-pointer rounded-2xl p-4 sm:p-5 border ${cardStyle} transition-all flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+                                isPaid 
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' 
+                                    : 'bg-gradient-to-br from-liquid-orange/30 to-liquid-amber/10 text-liquid-amber border border-liquid-orange/40'
+                            }">
+                                ${isPaid 
+                                    ? '<i class="ph-bold ph-check text-xl"></i>' 
+                                    : `<span class="font-mono font-black text-lg">${inst.index + 1}</span>`
+                                }
+                            </div>
+                            <div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h4 class="text-base sm:text-lg font-extrabold ${isPaid ? 'line-through text-zinc-400' : 'text-white'}">${inst.title}</h4>
+                                    ${badgeHtml}
+                                </div>
+                                <p class="text-xs sm:text-sm font-semibold text-zinc-300 mt-0.5">${inst.subtitle}</p>
+                                ${advanceDeductionNote}
+                                ${roundingNote}
+                            </div>
+                        </div>
+
+                        <div class="text-right shrink-0">
+                            <span class="text-xs font-bold text-zinc-400 block">${inst.isAutoCovered ? 'Payable Now' : 'Amount Due'}</span>
+                            <span class="text-xl sm:text-2xl font-black font-mono ${
+                                isPaid ? 'text-emerald-400' : 'text-liquid-amber'
+                            }">
+                                ৳ ${formatTk(inst.netDue)}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Reset EVERYTHING to 0 (zero) when Reset button is clicked
+        function resetAllToZero() {
+            state = JSON.parse(JSON.stringify(ZERO_STATE));
+
+            document.getElementById('input-credits').value = 0;
+            document.getElementById('slider-credits').value = 0;
+            document.getElementById('input-per-credit').value = 0;
+            document.getElementById('input-waiver').value = 0;
+            document.getElementById('input-sem-fee').value = 0;
+            document.getElementById('input-paid').value = 0;
+            document.getElementById('ratio-1').value = 0;
+            document.getElementById('ratio-2').value = 0;
+            document.getElementById('ratio-3').value = 0;
+
+            updateWaiverPills();
+            setRoundingStep(0);
+            updateRatios();
+            calculateAndRender();
+            showToast('All values reset to 0!');
+        }
+
+        function copyBreakdown() {
+            const grossCreditFee = state.credits * state.perCredit;
+            const waiverAmount = grossCreditFee * (state.waiverPct / 100);
+            const netCreditFee = grossCreditFee - waiverAmount;
+            const totalPayable = netCreditFee + state.semFee;
+            const remaining = Math.max(0, totalPayable - state.alreadyPaid);
+
+            const rawDues = state.ratios.map(r => remaining * (r / 100));
+            const rounded = applySequentialRounding(rawDues, state.roundingStep);
+            const roundLabel = state.roundingStep > 0 ? ` [Rounded to ${state.roundingStep}]` : '';
+
+            const summaryText = 
+`🎓 UIU - FEE CALC BREAKDOWN
+• Credits Taken: ${state.credits} (× ${formatTk(state.perCredit)} Tk) = ${formatTk(grossCreditFee)} Tk
+• Waiver (${state.waiverPct}% on Credit Fee): -${formatTk(waiverAmount)} Tk
+• Net Credit Fee: ${formatTk(netCreditFee)} Tk
+• Semester Fee (No Waiver): +${formatTk(state.semFee)} Tk
+• Total Payable: ${formatTk(totalPayable)} Tk
+• Already Paid: -${formatTk(state.alreadyPaid)} Tk
+• Remaining Balance: ${formatTk(remaining)} Tk
+
+💳 INSTALLMENTS (${state.ratios.join('% / ')}% of Remaining${roundLabel}):
+1st (${state.ratios[0]}%): ${formatTk(rounded[0].roundedDue)} Tk
+2nd (${state.ratios[1]}%): ${formatTk(rounded[1].roundedDue)} Tk
+3rd (${state.ratios[2]}%): ${formatTk(rounded[2].roundedDue)} Tk`;
+
+            const textArea = document.createElement("textarea");
+            textArea.value = summaryText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+
+            showToast('Copied full breakdown to clipboard!');
+        }
+
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast-message');
+            document.getElementById('toast-text').textContent = msg;
+            toast.classList.remove('opacity-0', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 2400);
+        }
+
+        window.onload = function () {
+            // Apply Set buttons and Default ratio values automatically on start
+            syncFromInputs('perCredit', 6500);
+            syncFromInputs('semFee', 6500);
+            syncFromInputs('paid', 20000);
+            document.getElementById('ratio-1').value = 40;
+            document.getElementById('ratio-2').value = 30;
+            document.getElementById('ratio-3').value = 30;
+            updateWaiverPills();
+            updateRatios();
+            calculateAndRender();
+        };
+    </script>
+</body>
+</html>
